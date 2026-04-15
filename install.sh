@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 set -e
 
@@ -15,13 +15,13 @@ report_status() {
 
 
 resolve_script_dir() {
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd -P)"
     MOONRAKER_UPDATE_FILE="${SCRIPT_DIR}/moonraker-update-section.conf"
 }
 
 
 check_required_files() {
-    local required_file
+    required_file=""
 
     for required_file in \
         "${SCRIPT_DIR}/printer.cfg" \
@@ -42,8 +42,8 @@ ensure_printer_config_path() {
 
 
 backup_existing_path() {
-    local target_path="$1"
-    local backup_path
+    target_path="$1"
+    backup_path=""
 
     if [ ! -e "${target_path}" ] && [ ! -L "${target_path}" ]; then
         return
@@ -68,8 +68,8 @@ stop_klipper() {
 
 
 link_config_file() {
-    local source_name="$1"
-    local target_path="${PRINTER_CONFIG_PATH}/${source_name}"
+    source_name="$1"
+    target_path="${PRINTER_CONFIG_PATH}/${source_name}"
 
     backup_existing_path "${target_path}"
     ln -s "${SCRIPT_DIR}/${source_name}" "${target_path}"
@@ -78,8 +78,8 @@ link_config_file() {
 
 
 copy_config_file() {
-    local source_name="$1"
-    local target_path="${PRINTER_CONFIG_PATH}/${source_name}"
+    source_name="$1"
+    target_path="${PRINTER_CONFIG_PATH}/${source_name}"
 
     backup_existing_path "${target_path}"
     cp "${SCRIPT_DIR}/${source_name}" "${target_path}"
@@ -116,15 +116,11 @@ cleanup() {
 
 
 print_update_manager_instructions() {
-    local escaped_script_dir
-
-    escaped_script_dir="${SCRIPT_DIR//&/\\&}"
-
     report_status "Moonraker Update Manager"
     echo "Add the section below to ${PRINTER_CONFIG_PATH}/moonraker.conf"
     echo "Template source: ${MOONRAKER_UPDATE_FILE}"
     echo
-    sed "s|__REPO_PATH__|${escaped_script_dir}|g" "${MOONRAKER_UPDATE_FILE}"
+    cat "${MOONRAKER_UPDATE_FILE}"
 }
 
 
