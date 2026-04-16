@@ -55,6 +55,7 @@ link_config_file() {
     source_name="$1"
     target_path="${PRINTER_CONFIG_PATH}/${source_name}"
     source_path="${SCRIPT_DIR}/${source_name}"
+    relative_source_path="$(realpath --relative-to="${PRINTER_CONFIG_PATH}" "${source_path}")"
 
     if [ -L "${target_path}" ] && [ "$(readlink -f "${target_path}")" = "$(readlink -f "${source_path}")" ]; then
         echo "Keeping existing ${source_name} link"
@@ -62,7 +63,7 @@ link_config_file() {
     fi
 
     backup_existing_path "${target_path}"
-    ln -s "${source_path}" "${target_path}"
+    ln -s "${relative_source_path}" "${target_path}"
     echo "Linked ${source_name}"
 }
 
