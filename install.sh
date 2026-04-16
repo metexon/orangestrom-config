@@ -20,22 +20,6 @@ resolve_script_dir() {
 }
 
 
-check_required_files() {
-    required_file=""
-
-    for required_file in \
-        "${SCRIPT_DIR}/printer.cfg" \
-        "${SCRIPT_DIR}/printer_mcu.cfg" \
-        "${SCRIPT_DIR}/printer_mcu1.cfg" \
-        "${MOONRAKER_UPDATE_FILE}"; do
-        if [ ! -f "${required_file}" ]; then
-            echo "Required file not found: ${required_file}"
-            exit 1
-        fi
-    done
-}
-
-
 ensure_printer_config_path() {
     mkdir -p "${PRINTER_CONFIG_PATH}"
 }
@@ -70,32 +54,68 @@ stop_klipper() {
 link_config_file() {
     source_name="$1"
     target_path="${PRINTER_CONFIG_PATH}/${source_name}"
+    source_path="${SCRIPT_DIR}/${source_name}"
+
+    if [ -L "${target_path}" ] && [ "$(readlink -f "${target_path}")" = "$(readlink -f "${source_path}")" ]; then
+        echo "Keeping existing ${source_name} link"
+        return
+    fi
 
     backup_existing_path "${target_path}"
-    ln -s "${SCRIPT_DIR}/${source_name}" "${target_path}"
+    ln -s "${source_path}" "${target_path}"
     echo "Linked ${source_name}"
 }
 
 
-copy_config_file() {
+prompt_and_copy_config_file() {
     source_name="$1"
     target_path="${PRINTER_CONFIG_PATH}/${source_name}"
+    replace_existing=""
 
     if [ -e "${target_path}" ] || [ -L "${target_path}" ]; then
-        echo "Keeping existing ${source_name}"
-        return
+        while true; do
+            printf "Replace existing %s? [y/N] " "${source_name}"
+            read -r replace_existing
+
+            case "${replace_existing}" in
+                [Yy]|[Yy][Ee][Ss])
+                    backup_existing_path "${target_path}"
+                    break
+                    ;;
+                ""|[Nn]|[Nn][Oo])
+                    echo "Keeping existing ${source_name}"
+                    return
+                    ;;
+                *)
+                    echo "Please answer y or n."
+                    ;;
+            esac
+        done
     fi
 
     cp "${SCRIPT_DIR}/${source_name}" "${target_path}"
     echo "Copied ${source_name}"
 }
 
+copy_config_file_with_backup() {
+    source_name="$1"
+    target_path="${PRINTER_CONFIG_PATH}/${source_name}"
+
+    backup_existing_path "${target_path}"
+    cp "${SCRIPT_DIR}/${source_name}" "${target_path}"
+    echo "Copied ${source_name}"
+}
 
 install_configs() {
     report_status "Installing printer config files into ${PRINTER_CONFIG_PATH}"
-    link_config_file "printer.cfg"
-    link_config_file "printer_mcu.cfg"
-    copy_config_file "printer_mcu1.cfg"
+    prompt_and_copy_config_file "printer.cfg"
+    link_config_file "printer_mtx6.cfg"
+    link_config_file "printer_mtx6_microprobe.cfg"
+    link_config_file "printer_giga.cfg"
+    link_config_file "printer_giga_bed.cfg"
+    link_config_file "printer_giga_heating_and_fans.cfg"
+    link_config_file "printer_giga_macros_and_homing.cfg"
+    link_config_file "printer_giga_steppers.cfg"
 }
 
 
@@ -131,7 +151,6 @@ print_update_manager_instructions() {
 main() {
     trap cleanup EXIT
     resolve_script_dir
-    check_required_files
     ensure_printer_config_path
     stop_klipper
     install_configs
