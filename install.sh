@@ -81,7 +81,11 @@ copy_config_file() {
     source_name="$1"
     target_path="${PRINTER_CONFIG_PATH}/${source_name}"
 
-    backup_existing_path "${target_path}"
+    if [ -e "${target_path}" ] || [ -L "${target_path}" ]; then
+        echo "Keeping existing ${source_name}"
+        return
+    fi
+
     cp "${SCRIPT_DIR}/${source_name}" "${target_path}"
     echo "Copied ${source_name}"
 }
